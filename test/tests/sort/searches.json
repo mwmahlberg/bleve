@@ -1,37 +1,4 @@
 [
-	{
-    "comment": "default order, all have same score, then by natural index order",
-		"search": {
-			"from": 0,
-			"size": 10,
-			"query": {
-				"match_all":{}
-			}
-		},
-		"result": {
-			"total_hits": 6,
-			"hits": [
-				{
-					"id": "a"
-				},
-        {
-          "id": "b"
-        },
-        {
-          "id": "c"
-        },
-        {
-          "id": "d"
-        },
-        {
-          "id": "e"
-        },
-        {
-          "id": "f"
-        }
-			]
-		}
-	},
   {
     "comment": "sort by name, ascending",
 		"search": {
@@ -439,5 +406,57 @@
           }
   			]
   		}
-  	}
+  	},
+  {
+    "comment": "sort by name, ascending, after marty",
+    "search": {
+      "from": 0,
+      "size": 10,
+      "query": {
+        "match_all":{}
+      },
+      "sort": ["name"],
+      "search_after": ["marty"]
+    },
+    "result": {
+      "total_hits": 6,
+      "hits": [
+        {
+          "id": "e"
+        },
+        {
+          "id": "b"
+        },
+        {
+          "id": "d"
+        }
+      ]
+    }
+  },
+  {
+    "comment": "sort by name, ascending, before nancy",
+    "search": {
+      "from": 0,
+      "size": 10,
+      "query": {
+        "match_all":{}
+      },
+      "sort": ["name"],
+      "search_before": ["nancy"]
+    },
+    "result": {
+      "total_hits": 6,
+      "hits": [
+        {
+          "id": "c"
+        },
+        {
+          "id": "f"
+        },
+        {
+          "id": "a"
+        }
+      ]
+    }
+  }
 ]

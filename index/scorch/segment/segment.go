@@ -59,6 +59,8 @@ type TermDictionary interface {
 	AutomatonIterator(a vellum.Automaton,
 		startKeyInclusive, endKeyExclusive []byte) DictionaryIterator
 	OnlyIterator(onlyTerms [][]byte, includeCount bool) DictionaryIterator
+
+	Contains(key []byte) (bool, error)
 }
 
 type DictionaryIterator interface {
@@ -128,4 +130,8 @@ type DocumentFieldTermVisitable interface {
 }
 
 type DocVisitState interface {
+}
+
+type StatsReporter interface {
+	ReportBytesWritten(bytesWritten uint64)
 }

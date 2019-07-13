@@ -31,6 +31,7 @@ import (
 	_ "github.com/blevesearch/bleve/search/highlight/highlighter/simple"
 
 	// char filters
+	_ "github.com/blevesearch/bleve/analysis/char/asciifolding"
 	_ "github.com/blevesearch/bleve/analysis/char/html"
 	_ "github.com/blevesearch/bleve/analysis/char/regexp"
 	_ "github.com/blevesearch/bleve/analysis/char/zerowidthnonjoiner"
@@ -44,6 +45,7 @@ import (
 
 	// token filters
 	_ "github.com/blevesearch/bleve/analysis/token/apostrophe"
+	_ "github.com/blevesearch/bleve/analysis/token/camelcase"
 	_ "github.com/blevesearch/bleve/analysis/token/compound"
 	_ "github.com/blevesearch/bleve/analysis/token/edgengram"
 	_ "github.com/blevesearch/bleve/analysis/token/elision"
@@ -51,10 +53,12 @@ import (
 	_ "github.com/blevesearch/bleve/analysis/token/length"
 	_ "github.com/blevesearch/bleve/analysis/token/lowercase"
 	_ "github.com/blevesearch/bleve/analysis/token/ngram"
+	_ "github.com/blevesearch/bleve/analysis/token/reverse"
 	_ "github.com/blevesearch/bleve/analysis/token/shingle"
 	_ "github.com/blevesearch/bleve/analysis/token/stop"
 	_ "github.com/blevesearch/bleve/analysis/token/truncate"
 	_ "github.com/blevesearch/bleve/analysis/token/unicodenorm"
+	_ "github.com/blevesearch/bleve/analysis/token/unique"
 
 	// tokenizers
 	_ "github.com/blevesearch/bleve/analysis/tokenizer/exception"

@@ -17,6 +17,7 @@ package scorch
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"reflect"
 	"regexp"
@@ -950,24 +951,22 @@ func TestIndexBatchWithCallbacks(t *testing.T) {
 		t.Fatalf("error opening index: %v", err)
 	}
 	defer func() {
-		err := idx.Close()
-		if err != nil {
-			t.Fatal(err)
+		cerr := idx.Close()
+		if cerr != nil {
+			t.Fatal(cerr)
 		}
 	}()
 
 	// Check that callback function works
-	updated := false
-	cbErr := fmt.Errorf("")
+	var wg sync.WaitGroup
+	wg.Add(1)
 
 	batch := index.NewBatch()
 	doc := document.NewDocument("3")
 	doc.AddField(document.NewTextField("name", []uint64{}, []byte("test3")))
 	batch.Update(doc)
 	batch.SetPersistedCallback(func(e error) {
-		updated = true
-		cbErr = e
-
+		wg.Done()
 	})
 
 	err = idx.Batch(batch)
@@ -975,19 +974,8 @@ func TestIndexBatchWithCallbacks(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i := 0; i < 30; i++ {
-		if updated {
-			break
-		}
-		time.Sleep(500 * time.Millisecond)
-	}
-	if !updated {
-		t.Fatal("Callback function wasn't called")
-	}
-	if cbErr != nil {
-		t.Fatal("Error wasn't updated properly on callback function")
-	}
-
+	wg.Wait()
+	// test has no assertion but will timeout if callback doesn't fire
 }
 
 func TestIndexInsertUpdateDeleteWithMultipleTypesStored(t *testing.T) {
@@ -1507,6 +1495,90 @@ func TestIndexDocumentVisitFieldTerms(t *testing.T) {
 	if !reflect.DeepEqual(fieldTerms, expectedFieldTerms) {
 		t.Errorf("expected field terms: %#v, got: %#v", expectedFieldTerms, fieldTerms)
 	}
+}
+
+func TestFieldTermsConcurrent(t *testing.T) {
+	cfg := CreateConfig("TestFieldTermsConcurrent")
+
+	// setting path to empty string disables persistence/merging
+	// which ensures we have in-memory segments
+	// which is important for this test, to trigger the right code
+	// path, where fields exist, but have NOT been uninverted by
+	// the Segment impl (in memory segments are still SegmentBase)
+	cfg["path"] = ""
+
+	defer func() {
+		err := DestroyTest(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}()
+
+	mp := mapping.NewIndexMapping()
+	analysisQueue := index.NewAnalysisQueue(1)
+	idx, err := NewScorch(Name, cfg, analysisQueue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = idx.Open()
+	if err != nil {
+		t.Fatalf("error opening index: %v", err)
+	}
+	defer func() {
+		cerr := idx.Close()
+		if cerr != nil {
+			t.Fatal(cerr)
+		}
+	}()
+
+	// create a single bath (leading to 1 in-memory segment)
+	// have one field named "name" and 100 others named f0-f99
+	batch := index.NewBatch()
+	for i := 0; i < 1000; i++ {
+		data := map[string]string{
+			"name": fmt.Sprintf("doc-%d", i),
+		}
+		for j := 0; j < 100; j++ {
+			data[fmt.Sprintf("f%d", j)] = fmt.Sprintf("v%d", i)
+		}
+		doc := document.NewDocument(fmt.Sprintf("%d", i))
+		err = mp.MapDocument(doc, data)
+		if err != nil {
+			t.Errorf("error mapping doc: %v", err)
+		}
+		batch.Update(doc)
+	}
+
+	err = idx.Batch(batch)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// now have 10 goroutines try to visit field values for doc 1
+	// in a random field
+	var wg sync.WaitGroup
+	for j := 0; j < 10; j++ {
+		wg.Add(1)
+		go func() {
+			r, err := idx.Reader()
+			if err != nil {
+				t.Fatal(err)
+			}
+			docNumber, err := r.InternalID("1")
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = r.DocumentVisitFieldTerms(docNumber,
+				[]string{fmt.Sprintf("f%d", rand.Intn(100))},
+				func(field string, term []byte) {})
+			if err != nil {
+				t.Fatal(err)
+			}
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
 }
 
 func TestConcurrentUpdate(t *testing.T) {
